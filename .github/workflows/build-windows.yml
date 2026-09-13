@@ -1,0 +1,43 @@
+name: Build R-Level Journal Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'R-Level-Journal-PC-Project.zip'
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract PC project
+        shell: powershell
+        run: |
+          if (Test-Path buildpc) { Remove-Item buildpc -Recurse -Force }
+          New-Item -ItemType Directory -Path buildpc | Out-Null
+          Expand-Archive -Path "R-Level-Journal-PC-Project.zip" -DestinationPath "buildpc" -Force
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Build EXE
+        working-directory: buildpc/R-Level-Journal-PC-Project
+        run: pyinstaller --noconfirm --clean --onefile --windowed --name "R-Level-Journal" main.py
+
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: R-Level-Journal-Windows
+          path: buildpc/R-Level-Journal-PC-Project/dist/R-Level-Journal.exe
+          if-no-files-found: error
